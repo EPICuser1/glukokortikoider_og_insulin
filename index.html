@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insulinoppstart ved glukokortikoidbehandling</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+            max-width: 700px; /* Begrens bredden for bedre utskriftskvalitet */
+        }
+        table {
+            margin-top: 10px;
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+            word-wrap: break-word; /* Sikrer at innhold brytes riktig */
+        }
+        .copy-btn {
+            margin-top: 10px;
+            padding: 5px 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .copy-btn:hover {
+            background-color: #45a049;
+        }
+
+        /* Utskriftsvennlig stil */
+        @media print {
+            body {
+                margin: 10mm; /* Standard marginer for A4 */
+            }
+            .result {
+                border: none;
+                padding: 0;
+            }
+            .copy-btn {
+                display: none; /* Skjul kopier-knappen ved utskrift */
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Insulinoppstart ved glukokortikoidbehandling</h1>
+    <form id="criteriaForm">
+        <label for="steroidType">Velg type glukokortikoid:</label><br>
+        <select id="steroidType">
+            <option value="prednisolon">Prednisolon</option>
+            <option value="dexamethason">Dexamethason</option>
+        </select><br><br>
+
+        <label for="abdominalFedme">Har pasienten abdominal fedme?</label><br>
+        <select id="abdominalFedme">
+            <option value="nei">Nei</option>
+            <option value="ja">Ja</option>
+        </select><br><br>
+
+        <label for="pasientVekt">Pasientens vekt (kg):</label><br>
+        <input type="number" id="pasientVekt" min="1" step="1" placeholder="Vekt i kg" required><br><br>
+
+        <button type="button" onclick="generateText()">Generer behandlingsguide</button>
+    </form>
+
+    <div id="result" class="result"></div>
+    <button id="copyButton" class="copy-btn" style="display: none;" onclick="copyToClipboard()">Kopier</button>
+
+    <script>
+        function generateText() {
+            const steroidType = document.getElementById('steroidType').value;
+            const abdominalFedme = document.getElementById('abdominalFedme').value;
+            let pasientVekt = parseFloat(document.getElementById('pasientVekt').value);
+            const result = document.getElementById('result');
+            const copyButton = document.getElementById('copyButton');
+            let outputText = '';
+
+            // Sjekk om vekt er oppgitt og gyldig
+            if (!pasientVekt || pasientVekt <= 0) {
+                alert('Vennligst oppgi pasientens vekt (uten desimaler).');
+                return;
+            }
+
+            // Beregning av insulinmengde basert på kriterier
+            let insulinFaktor = 0.3; // Standard for "ja" på abdominal fedme er nå 0.3 E/kg
+
+            // Oppdater insulinFaktor hvis "nei" på abdominal fedme
+            if (abdominalFedme === 'nei') {
+                if (steroidType === 'prednisolon' || steroidType === 'dexamethason') {
+                    insulinFaktor = 0.2; // Bruker 0.2 E/kg i stedet for 0.3 E/kg for "ingen" abdominal fedme
+                }
+            }
+
+            const insulinDose = Math.floor(pasientVekt * insulinFaktor);
+            const hurtigvirkendeInsulin = Math.floor(pasientVekt * 0.1);
+
+            // Funksjoner for å generere tabell
+            function genererTabell() {
+                return '<table><tr><th></th><th>Fastende</th><th>2 timer etter lunsj</th><th>2 timer etter middag</th></tr>' +
+                    '<tr><td>Glukose</td><td></td><td></td><td></td></tr></table><br>';
+            }
+
+            // Legg til den nye forklarende teksten
+            outputText = 'Rasjonalet er at glukokortikoider kan lede til akutt hyperglykemi som må behandles med insulin. Prednisolon har en glukoseøkende effekt som varer i 12 timer, men Dexamethason sin effekt varer i 24 timer. Hvis Prednisolon gis på morgen, dekkes dette med en middels hurtigvirkende insulin, f.eks. Humulin, samtidig på morgenen, mens for Dexamethason må vi i tillegg ha en kveldsdose Humulin.<br><br>';
+            
+            outputText += 'Mål blodsukker fastende (mål: 4-8 mmol/l) og ikke-fastende (mål: < 12 mmol/l).<br><br>';
+            outputText += 'Dagen etter oppstart må blodglukose måles fastende, 2 timer etter lunsj og 2 timer etter middag. Fyll inn følgende tabell:<br><br>';
+            outputText += genererTabell();
+
+            if (steroidType === 'dexamethason') {
+                outputText += `For behandling med Dexamethason: Døgndosen deles i to, gitt som en dose om morgenen og en dose om kvelden. For denne pasienten er dette ${Math.floor(insulinDose / 2)} E om morgenen og ${Math.floor(insulinDose / 2)} E om kvelden.<br><br>`;
+            } else {
+                outputText += `På visitt dagen etter, ved verdier over 12 mmol/l, skal man starte med middels langsomtvirkende insulin (f.eks. Humulin) om morgenen (${insulinFaktor} E/kg). For denne pasienten er dette omtrent ${insulinDose} E.<br><br>`;
+            }
+
+            outputText += 'Fyll så ut samme tabell kommende dag, denne lager grunnlag for justeringer på visitt neste dag:<br><br>';
+            outputText += genererTabell();
+            outputText += 'Gi beskjed til sykepleier at de må korrigere for høye blodsukker det neste døgnet med hurtigvirkende insulin, f.eks. Humalog eller Fiasp. De beregner 1 E per mmol/l for å nå 7 mmol/l. De kan så måle igjen først etter 3 timer, ikke før. <i>Eks. pasienten har 20 mmol/l 2 timer etter lunsj og korreksjonsdose på 13 E settes. Blodsukkeret måles igjen om 3 timer og ny korreksjonsdose vurderes.</i><br><br>';
+            
+            // Legg til tabell med endret kolonnenavn
+            outputText += '<table><tr><th>Klokkeslett</th><th>Glukose</th><th>Korreksjonsdose insulin</th></tr>';
+            outputText += '<tr><td></td><td></td><td></td></tr>';
+            outputText += '<tr><td></td><td></td><td></td></tr>';
+            outputText += '<tr><td></td><td></td><td></td></tr></table><br>';
+
+            // Legg til den avsluttende setningen
+            outputText += 'På visitt dagen etter summeres gårsdagens korreksjonsdoser og legges til morgendosen med Humulin.<br><br>';
+            
+            // Legg til ekstra tekst hvis glukokortikoid er Dexamethason
+            if (steroidType === 'dexamethason') {
+                outputText += 'Hvis fastende blodglukose er over mål på visitten tyder det på at kveldsdosen var for lav. Korriger dette på dagens morgendose Humulin, men legg også til samme mengde på kveldsdosen Humulin. <i>Eks. pasienten våkner med 12 mmol/l i blodglukose, legg da til 5 E Humulin på dagens morgendose, samt også 5 E ekstra på kveldens Humulin-dose.</i><br><br>';
+            }
+
+            outputText += 'Generelt: Juster insulindosen ned i takt med reduksjon i glukokortikoiddose. F.eks. en 50% reduksjon av glukokortikoid = 50% reduksjon av den økte insulindosen.';
+            
+            result.innerHTML = outputText;
+            copyButton.style.display = 'block'; // Vis kopier-knappen når resultatet er generert
+        }
+
+        function copyToClipboard() {
+            const result = document.getElementById('result');
+            const range = document.createRange();
+            range.selectNode(result);
+            window.getSelection().removeAllRanges(); // Fjern eventuelle tidligere markeringer
+            window.getSelection().addRange(range);
+            document.execCommand('copy');
+            window.getSelection().removeAllRanges(); // Fjern markeringen etter kopiering
+            alert('Teksten er kopiert til utklippstavlen!');
+        }
+    </script>
+</body>
+</html>
